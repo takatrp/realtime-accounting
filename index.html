@@ -24,7 +24,7 @@
     --danger:#b45309;
     --shadow:0 10px 30px rgba(35,80,90,.12);
     --border-color:#cbd5e1;
-    --line:#e7eef3; /* 追加: フッター用 */
+    --line:#e7eef3;
   }
 
   *{box-sizing:border-box;}
@@ -41,7 +41,7 @@
   .page{
     max-width:1120px;
     margin:0 auto;
-    padding:16px 16px 10px; /* フッターのために下部パディング調整 */
+    padding:16px 16px 10px;
   }
 
   /* Header */
@@ -205,7 +205,7 @@
     margin:8px 0;
   }
 
-  /* Buttons */
+  /* Buttons (Input Form) */
   .actions{
     margin-top:20px;
     display:flex;
@@ -234,6 +234,49 @@
     background:#e2e8f0;
     color:#475569;
   }
+  
+  /* Buttons (Result Actions) - New Simple Design */
+  .btn-group {
+    margin-top: 32px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: 24px;
+    border-top: 1px dashed #e2e8f0;
+  }
+  .btn-simple {
+    flex: 1;
+    min-width: 140px;
+    max-width: 240px;
+    padding: 12px 0;
+    border-radius: 8px;
+    border: 1px solid rgba(87,136,153, 0.2);
+    background: #f0f7fa; /* 淡いブルーグレー */
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .btn-simple:hover {
+    background: #e1f0f5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(87,136,153, 0.1);
+  }
+  
+  /* 印刷ボタン: 太い線で強調 */
+  .btn-print {
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+  }
+  .btn-print:hover {
+    background: #f0f7fa;
+  }
+
 
   /* Result Area */
   .result-main{
@@ -339,7 +382,6 @@
     transform: scale(0.98);
   }
   
-  /* タップできることを示すアイコン */
   .result-card::after {
     content: '?';
     position: absolute;
@@ -396,7 +438,7 @@
     margin-bottom: 4px;
   }
   
-  /* mini footer (CC) - 提供されたスタイル */
+  /* mini footer (CC) */
   .mk-mini{ text-align:center;font-size:12px;color:#7b8794;padding:10px 10px 14px;border-top:1px solid var(--line);margin-top:24px;white-space:nowrap;overflow-x:auto }
   .mk-mini a{color:inherit;text-decoration:underline}
   .mk-mini::-webkit-scrollbar{height:8px}
@@ -483,6 +525,27 @@
   }
   .modal-desc p { margin-bottom: 10px; }
   .modal-desc strong { color: var(--accent); }
+  
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 42, 45, 0.9);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 2000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .toast.show {
+    opacity: 1;
+  }
 
   /* Responsive */
   @media (max-width:900px){
@@ -493,7 +556,24 @@
   }
   @media (max-width:600px){
     .field-row, .result-grid { grid-template-columns:1fr; }
-    input[type="text"], input[type="number"] { font-size: 16px; /* Prevent Zoom */ }
+    input[type="text"], input[type="number"] { font-size: 16px; }
+    .btn-group { flex-direction: column; }
+    .btn-simple { width: 100%; max-width: none; }
+  }
+  
+  /* Print Styles */
+  @media print {
+    body { background: #fff; color: #000; }
+    .page { max-width: 100%; padding: 0; margin: 0; }
+    header .header-content p { display: none; } /* リード文隠す */
+    #simForm, .actions, .btn-group, .note, footer { display: none !important; } /* 入力フォームとボタン隠す */
+    .layout { display: block; }
+    .card { box-shadow: none; border: none; padding: 0; }
+    #resultCard { break-inside: avoid; }
+    .result-main { padding-top: 0; border-bottom: 2px solid #000; }
+    .chart { border: 1px solid #ccc; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .result-card { border: 1px solid #ccc; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .result-card::after { display: none; } /* ?アイコン隠す */
   }
 </style>
 </head>
@@ -511,7 +591,7 @@
         <span class="badge">Ver 3.0</span>
       </h1>
       <p class="lead">
-        「自計化・早期化」のメリットを、精神論ではなく「金額（円）」で試算します。
+        「自計化・早期化」のメリットを、「金額（円）」で定量的に試算します。
       </p>
     </div>
   </header>
@@ -634,7 +714,7 @@
       </div>
 
       <div class="actions">
-        <button type="button" class="secondary" id="resetBtn">リセット</button>
+        <button type="button" class="secondary" onclick="resetAll()">リセット</button>
         <button type="submit" class="primary">試算する</button>
       </div>
     </form>
@@ -678,10 +758,97 @@
   </div>
 </div>
 
+<!-- トースト通知 -->
+<div id="toast" class="toast"></div>
+
 <script>
   (function(){
     const STORAGE_KEY = "rt_sim_v3";
     const VERSION = "v3.0";
+    
+    // グローバルスコープに関数を公開（onclickで呼ぶため）
+    window.resetAll = function(){
+       if(confirm("入力内容をリセットしますか？")){
+           document.getElementById("simForm").reset();
+           localStorage.removeItem(STORAGE_KEY);
+           document.getElementById("results").innerHTML = '<div class="result-main" style="padding:40px 0;color:var(--muted);">左側の数値を入力して<br>「試算する」ボタンを押してください。</div>';
+           currentResult = null;
+           showToast("リセットしました");
+       }
+    };
+
+    window.printPage = function(){
+        if(!currentResult){
+            alert("先に試算を行ってください");
+            return;
+        }
+        window.print();
+    };
+
+    window.copyResult = function(){
+        if(!currentResult){
+            alert("先に試算を行ってください");
+            return;
+        }
+        const r = currentResult;
+        const text = [
+            "【リアルタイム会計 経済価値試算結果】",
+            `■ 年間期待メリット総額: ${formatMoney(r.totalBenefit)} 円`,
+            `   (対コスト収支: ${r.netBenefit>=0?'+':''}${formatCompact(r.netBenefit)} /年)`,
+            "",
+            "■ 内訳",
+            `1. CCC短縮・資金繰り改善: ${formatMoney(r.benefitCCC)} 円`,
+            `   (${r.cccDiff}日短縮 × 資金コスト${(r.fundingRate*100).toFixed(1)}%)`,
+            `2. 粗利悪化の早期検知: ${formatMoney(r.benefitLoss)} 円`,
+            `   (${r.monthsDiff}ヶ月早期化)`,
+            `3. 銀行金利コスト適正化: ${formatMoney(r.benefitInterest)} 円`,
+            `   (金利 ${(r.rateDiff*100).toFixed(2)}% 改善想定)`,
+            `4. リスク回避(期待値): ${formatMoney(r.benefitRisk)} 円`,
+            `   (発生率 ${(r.probDiff*100).toFixed(1)}%pt 低下)`,
+            "",
+            `※年間コスト: ${formatMoney(r.cost)} 円`,
+            "--------------------------------------------------",
+            "税理士法人松本会計事務所 - リアルタイム会計シミュレーター"
+        ].join("\n");
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+            .then(() => {
+                showToast("結果をクリップボードにコピーしました");
+            })
+            .catch(err => {
+                console.warn("Clipboard API failed, trying execCommand fallback", err);
+                fallbackCopyText(text);
+            });
+        } else {
+            fallbackCopyText(text);
+        }
+    };
+    
+    function fallbackCopyText(text) {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                showToast("結果をクリップボードにコピーしました");
+            } else {
+                alert("コピーに失敗しました。");
+            }
+        } catch (err) {
+            console.error("Fallback copy failed", err);
+            alert("コピーに失敗しました。");
+        }
+    }
 
     // -------------------------------------------------------
     // フッター初期化 (自動日付更新)
@@ -695,12 +862,9 @@
         try{d=new Date(document.lastModified)}catch(_){d=new Date()}
         if(!(d instanceof Date)||isNaN(d.getTime())) d=new Date();
         
-        // JSTを考慮して日付文字列を生成 (簡易版)
         var iso=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-        
         var lu=document.getElementById('last-updated-date');
         if(lu) lu.textContent=iso;
-        
         var br=document.getElementById('build-rev');
         if(br) br.textContent=VERSION;
     }
@@ -708,22 +872,16 @@
     // -------------------------------------------------------
     // フォーマット関連関数
     // -------------------------------------------------------
-    
-    // 数値のみ抽出 (例: "1,000" -> 1000)
     function parseMoney(val){
       if(!val) return 0;
       const s = String(val).replace(/,/g, '').trim();
       const n = parseFloat(s);
       return isNaN(n) ? 0 : n;
     }
-
-    // カンマ区切り (例: 1000 -> "1,000")
     function formatMoney(num){
       if(!isFinite(num)) return "";
-      // 小数点以下は丸める
       return Math.round(num).toLocaleString('ja-JP');
     }
-
     function formatCompact(num){
       if(num >= 100000000) return (num/100000000).toFixed(1) + "億";
       if(num >= 10000) return (num/10000).toFixed(0) + "万";
@@ -735,19 +893,12 @@
       const inputs = document.querySelectorAll('.format-money');
       inputs.forEach(input => {
         input.addEventListener('input', function(e){
-          // カーソル位置の保存（簡易的）
           const originalVal = this.value;
-          const originalLen = originalVal.length;
-          const caretPos = this.selectionStart;
-
-          // カンマ除去して数値化
           const raw = originalVal.replace(/[^0-9.]/g, '');
           if(raw === "") {
              this.value = "";
              return;
           }
-          
-          // 再フォーマット
           const num = parseFloat(raw);
           if(!isNaN(num)){
             const formatted = num.toLocaleString('ja-JP');
@@ -756,13 +907,18 @@
             }
           }
         });
-        
-        // blur時にも念のため整形
         input.addEventListener('blur', function(){
             const n = parseMoney(this.value);
             if(n > 0) this.value = n.toLocaleString('ja-JP');
         });
       });
+    }
+
+    function showToast(msg){
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        setTimeout(()=>{ el.classList.remove("show"); }, 3000);
     }
 
     // -------------------------------------------------------
@@ -778,16 +934,13 @@
       return parseFloat(el.value) || 0;
     }
     
-    // 計算結果を保持する変数
     let currentResult = null;
 
     function calculate(){
-      // Input
       const sales = getVal("sales");
       const marginBase = getVal("marginBase") / 100;
-      const cogs = sales * (1 - marginBase); // 原価
+      const cogs = sales * (1 - marginBase);
 
-      // 1. CCC
       const cccCurrent = getVal("cccCurrent");
       const cccTarget = getVal("cccTarget");
       const cccDiff = Math.max(0, cccCurrent - cccTarget);
@@ -795,23 +948,19 @@
       const wcReduction = (cogs / 365) * cccDiff; 
       const benefitCCC = wcReduction * fundingRate;
 
-      // 2. 逸失利益
       const marginWorse = getVal("marginWorse") / 100;
       const monthsDiff = Math.max(0, getVal("monthsWithout") - getVal("monthsWith"));
       const marginDrop = Math.max(0, marginBase - marginWorse);
       const benefitLoss = sales * marginDrop * (monthsDiff / 12);
 
-      // 3. 金利
       const debt = getVal("debtBalance");
       const rateDiff = getVal("rateDiff") / 100;
       const benefitInterest = debt * rateDiff;
 
-      // 4. リスク
       const lossAmt = getVal("lossAmount");
       const probDiff = Math.max(0, getVal("probBefore") - getVal("probAfter")) / 100;
       const benefitRisk = lossAmt * probDiff;
 
-      // Total
       const totalBenefit = benefitCCC + benefitLoss + benefitInterest + benefitRisk;
       const cost = getVal("annualCost");
       const netBenefit = totalBenefit - cost;
@@ -896,9 +1045,14 @@
              <strong>${r.cost > 0 ? ((r.netBenefit/r.cost)*100).toFixed(1) + "%" : "-"}</strong>
           </div>
         </div>
+
+        <div class="btn-group">
+            <button type="button" class="btn-simple" onclick="copyResult()">コピー</button>
+            <button type="button" class="btn-simple" onclick="resetAll()">リセット</button>
+            <button type="button" class="btn-simple btn-print" onclick="printPage()">印刷 / PDF保存</button>
+        </div>
       `;
       
-      // スマホならスクロール
       if(window.innerWidth < 900){
         document.getElementById("resultCard").scrollIntoView({behavior:"smooth", block:"start"});
       }
@@ -914,7 +1068,6 @@
       const titleEl = document.getElementById("modalTitle");
       const formEl = document.getElementById("modalFormula");
       const descEl = document.getElementById("modalDesc");
-      
       const r = currentResult;
       
       if(type === 'ccc'){
@@ -950,7 +1103,6 @@
       overlay.classList.add("active");
     };
 
-    // モーダル閉じる
     document.getElementById("modalClose").addEventListener("click", ()=>{
       document.getElementById("modalOverlay").classList.remove("active");
     });
@@ -990,15 +1142,6 @@
     document.getElementById("simForm").addEventListener("submit", (e)=>{
       e.preventDefault();
       calculate();
-    });
-    
-    document.getElementById("resetBtn").addEventListener("click", ()=>{
-       if(confirm("数値をリセットしますか？")){
-           document.getElementById("simForm").reset();
-           localStorage.removeItem(STORAGE_KEY);
-           document.getElementById("results").innerHTML = '<div class="result-main" style="padding:40px 0;color:var(--muted);">計算結果がここに表示されます</div>';
-           currentResult = null;
-       }
     });
 
   })();

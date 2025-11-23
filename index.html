@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>リアルタイム会計の経済価値シミュレーター</title>
+<meta name="description" content="月次決算の早期化・自計化による経済的メリットを定量的に試算するツールです。">
+
+<!-- ファビコン設定 -->
+<link rel="icon" href="favicon192192.png" sizes="192x192" />
+<link rel="shortcut icon" href="favicon192192.png" />
+<link rel="apple-touch-icon" href="favicon192192.png" />
+
+<style>
+  /* Ver 1.0 のカラースキーム */
+  :root{
+    --bg:#f4f9fb;
+    --card:#ffffff;
+    --ink:#1e2a2d;
+    --muted:#5a6a6d;
+    --accent:#578899;       /* Ver 1.0 Main Color */
+    --accent-soft:#7aa2b0;  /* Soft variation */
+    --accent-pale:rgba(87,136,153,0.1);
+    --danger:#b45309;
+    --shadow:0 10px 30px rgba(35,80,90,.12);
+    --border-color:#cbd5e1;
+    --line:#e7eef3; /* 追加: フッター用 */
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page{
+    max-width:1120px;
+    margin:0 auto;
+    padding:16px 16px 10px; /* フッターのために下部パディング調整 */
+  }
+
+  /* Header */
+  header{
+    padding:12px 4px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .logo-link {
+    display: inline-block;
+    line-height: 0;
+    flex-shrink: 0;
+  }
+  
+  .logo {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
+  .header-content {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  header h1{
+    margin:0 0 6px;
+    font-size:1.4rem;
+    font-weight:700;
+    letter-spacing:.04em;
+    color: var(--ink);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  header h1 span.badge{
+    font-size:.75rem;
+    padding:2px 8px;
+    border-radius:999px;
+    background:var(--accent-pale);
+    color:var(--accent);
+    border:1px solid rgba(87,136,153,.3);
+  }
+  header p.lead{
+    margin:0;
+    font-size:.88rem;
+    color:var(--muted);
+  }
+  .note{
+    margin:8px 0 16px;
+    font-size:.8rem;
+    color:var(--muted);
+  }
+
+  /* Layout */
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    gap:16px;
+    align-items:flex-start;
+  }
+
+  /* Card Styles */
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:16px 18px;
+  }
+  .card h2{
+    margin:0 0 12px;
+    font-size:1.05rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 8px;
+  }
+  .card h2 span.tag{
+    font-size:.7rem;
+    padding:2px 8px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.5);
+    color:#475569;
+    background:#f1f5f9;
+  }
+
+  /* Form Elements */
+  .field-group{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  label{
+    font-size:.85rem;
+    font-weight:600;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    color: var(--ink);
+  }
+  label span.unit{
+    font-size:.75rem;
+    color:var(--muted);
+    font-weight:400;
+  }
+  .field small{
+    font-size:.75rem;
+    color:var(--muted);
+    line-height:1.3;
+  }
+
+  /* Inputs */
+  input[type="text"],
+  input[type="number"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border-color);
+    font-size:.95rem;
+    font-family:inherit;
+    background:#f9fafb;
+    transition: all 0.2s ease;
+    text-align: right; /* 数値は見やすく右寄せ */
+  }
+  input:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:#ffffff;
+    box-shadow:0 0 0 3px rgba(87,136,153,.15);
+  }
+  input::placeholder{
+    color:#cbd5e1;
+    text-align: left;
+  }
+
+  .field-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .field-row-3{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+  }
+
+  hr.divider{
+    border:none;
+    border-top:1px dashed #e2e8f0;
+    margin:8px 0;
+  }
+
+  /* Buttons */
+  .actions{
+    margin-top:20px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:flex-end;
+  }
+  button{
+    border:none;
+    border-radius:999px;
+    font-size:.85rem;
+    font-weight:600;
+    padding:10px 20px;
+    cursor:pointer;
+    font-family:inherit;
+    transition:transform .1s, box-shadow .1s;
+  }
+  button:active{ transform:scale(0.98); }
+  
+  button.primary{
+    background:linear-gradient(135deg,var(--accent),var(--accent-soft));
+    color:#ffffff;
+    box-shadow:0 4px 12px rgba(87,136,153,.4);
+  }
+  button.secondary{
+    background:#e2e8f0;
+    color:#475569;
+  }
+
+  /* Result Area */
+  .result-main{
+    text-align: center;
+    padding: 10px 0 20px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 16px;
+  }
+  .result-total{
+    font-size:1.8rem;
+    font-weight:700;
+    color: var(--accent);
+    line-height:1.2;
+  }
+  .result-sub{
+    font-size:.8rem;
+    color:var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Chart */
+  .chart{
+    margin:0 0 16px;
+    padding:16px 12px 4px;
+    border-radius:12px;
+    background:linear-gradient(to bottom, #ffffff, #f8fafc);
+    border: 1px solid #e2e8f0;
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    height:160px;
+  }
+  .chart-col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    height: 100%;
+  }
+  .chart-bar-wrapper {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+  }
+  .chart-bar{
+    width:70%;
+    border-radius:6px 6px 0 0;
+    background:var(--accent);
+    opacity: 0.85;
+    transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    min-height: 4px;
+    position: relative;
+  }
+  .chart-bar span.bar-val {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: bold;
+    white-space: nowrap;
+    color: var(--muted);
+    opacity: 0;
+    animation: fadeIn 0.3s 0.4s forwards;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .chart-label{
+    font-size:.65rem;
+    color:#475569;
+    text-align:center;
+    line-height:1.2;
+    height: 2.4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+  }
+
+  /* Result Grid & Cards */
+  .result-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .result-card{
+    background:#f8fafc;
+    border-radius:12px;
+    padding:12px;
+    border:1px solid #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+  }
+  .result-card:hover{
+    background: #f1f5f9;
+    border-color: var(--accent-soft);
+  }
+  .result-card:active{
+    transform: scale(0.98);
+  }
+  
+  /* タップできることを示すアイコン */
+  .result-card::after {
+    content: '?';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-pale);
+    color: var(--accent);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .result-card h3{
+    margin:0 0 6px;
+    font-size:.8rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .result-card h3::before{
+    content:'';
+    display:block;
+    width:4px;
+    height:12px;
+    background:var(--accent);
+    border-radius:2px;
+  }
+  .result-card .val-main{
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .result-card .val-sub{
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* Result Footer */
+  .result-footer{
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px dashed #cbd5e1;
+    font-size:.8rem;
+  }
+  .result-footer-row{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  
+  /* mini footer (CC) - 提供されたスタイル */
+  .mk-mini{ text-align:center;font-size:12px;color:#7b8794;padding:10px 10px 14px;border-top:1px solid var(--line);margin-top:24px;white-space:nowrap;overflow-x:auto }
+  .mk-mini a{color:inherit;text-decoration:underline}
+  .mk-mini::-webkit-scrollbar{height:8px}
+  .mk-mini::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+
+  /* Modal (Pop-up) */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(30, 42, 45, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    padding: 20px;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content {
+    background: #fff;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.active .modal-content {
+    transform: translateY(0);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+  }
+  .modal-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--accent);
+  }
+  .close-btn {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  .formula-box {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--ink);
+    margin-bottom: 16px;
+    border: 1px solid #e2e8f0;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .modal-desc {
+    font-size: 0.9rem;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .modal-desc p { margin-bottom: 10px; }
+  .modal-desc strong { color: var(--accent); }
+
+  /* Responsive */
+  @media (max-width:900px){
+    .layout{ grid-template-columns:1fr; }
+    .page{ padding:14px 12px 28px; }
+    header { flex-direction: column; align-items: flex-start; }
+    .logo-link { margin-bottom: 8px; }
+  }
+  @media (max-width:600px){
+    .field-row, .result-grid { grid-template-columns:1fr; }
+    input[type="text"], input[type="number"] { font-size: 16px; /* Prevent Zoom */ }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <!-- ロゴ表示 -->
+    <a class="logo-link" href="https://takatrp.github.io/tool-portal/" target="_blank" rel="noopener">
+      <img src="ロゴ.jpg" alt="松本会計ロゴ" class="logo"/>
+    </a>
+    <div class="header-content">
+      <h1>
+        リアルタイム会計 経済価値シミュレーター
+        <span class="badge">Ver 3.0</span>
+      </h1>
+      <p class="lead">
+        「自計化・早期化」のメリットを、精神論ではなく「金額（円）」で試算します。
+      </p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 入力エリア -->
+    <form id="simForm" class="card" autocomplete="off">
+      <h2>前提条件の入力 <span class="tag">Input</span></h2>
+
+      <div class="field-group">
+        <!-- 基本情報 -->
+        <div class="field">
+          <label for="sales">
+            <span class="label-main">年間売上高</span>
+            <span class="unit">円</span>
+          </label>
+          <!-- カンマ編集用に type="text" inputmode="numeric" を使用 -->
+          <input id="sales" type="text" inputmode="numeric" placeholder="300,000,000" class="format-money">
+        </div>
+
+        <div class="field">
+          <label for="marginBase">
+            <span class="label-main">平常時の粗利率（限界利益率）</span>
+            <span class="unit">％</span>
+          </label>
+          <input id="marginBase" type="number" min="0" max="100" step="0.1" placeholder="40.0">
+        </div>
+
+        <hr class="divider">
+
+        <!-- CCC -->
+        <div class="field">
+          <label>CCC（キャッシュ・コンバージョン・サイクル） <span class="unit">日</span></label>
+          <div class="field-row">
+            <div class="field">
+                <small>現状</small>
+                <input id="cccCurrent" type="number" placeholder="90">
+            </div>
+            <div class="field">
+                <small>目標</small>
+                <input id="cccTarget" type="number" placeholder="60">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fundingRate">
+            <span class="label-main">資金調達コスト率</span>
+            <span class="unit">％</span>
+          </label>
+          <input id="fundingRate" type="number" step="0.1" placeholder="2.5">
+        </div>
+
+        <hr class="divider">
+
+        <!-- 逸失利益 -->
+        <div class="field">
+          <label for="marginWorse">
+            <span class="label-main">悪化時の粗利率（放置時）</span>
+            <span class="unit">％</span>
+          </label>
+          <input id="marginWorse" type="number" step="0.1" placeholder="35.0">
+        </div>
+        <div class="field">
+          <label>異常検知までのタイムラグ <span class="unit">ヶ月</span></label>
+          <div class="field-row">
+            <div class="field">
+                <small>年1決算時</small>
+                <input id="monthsWithout" type="number" placeholder="10">
+            </div>
+            <div class="field">
+                <small>導入後</small>
+                <input id="monthsWith" type="number" placeholder="2">
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 金利・リスク -->
+        <div class="field">
+          <label>借入金利とリスク</label>
+          <div class="field-row">
+            <div class="field">
+               <small>借入残高 (円)</small>
+               <input id="debtBalance" type="text" inputmode="numeric" placeholder="100,000,000" class="format-money">
+            </div>
+            <div class="field">
+               <small>金利改善幅 (%)</small>
+               <input id="rateDiff" type="number" step="0.1" placeholder="0.2">
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:8px;">
+          <label>重大リスク（不正・追徴等）の回避</label>
+          <div class="field-row-3">
+            <div class="field">
+               <small>損失額 (円)</small>
+               <input id="lossAmount" type="text" inputmode="numeric" placeholder="10,000,000" class="format-money">
+            </div>
+            <div class="field">
+               <small>発生率(旧)%</small>
+               <input id="probBefore" type="number" step="0.1" placeholder="5.0">
+            </div>
+            <div class="field">
+               <small>発生率(新)%</small>
+               <input id="probAfter" type="number" step="0.1" placeholder="1.0">
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="field">
+          <label for="annualCost">
+            <span class="label-main">リアルタイム会計の年間コスト</span>
+            <span class="unit">円</span>
+          </label>
+          <input id="annualCost" type="text" inputmode="numeric" placeholder="1,500,000" class="format-money">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="resetBtn">リセット</button>
+        <button type="submit" class="primary">試算する</button>
+      </div>
+    </form>
+
+    <!-- 結果エリア -->
+    <div id="resultCard" class="card">
+      <h2>試算結果 <span class="tag">Result</span></h2>
+      <div id="results">
+        <div class="result-main" style="padding: 40px 0; color: var(--muted);">
+          左側の数値を入力して<br>「試算する」ボタンを押してください。
+        </div>
+      </div>
+      <div class="note" style="margin-top:16px; text-align:center;">
+        👆 各項目のパネルをタップすると、計算式と解説が表示されます。
+      </div>
+    </div>
+  </div>
+
+  <!-- フッター (CC & Link) -->
+  <footer class="mk-mini">
+    © <span id="cpy-year">2025</span>
+    <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜ 
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜ 
+    <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜ 
+    <span id="build-rev">v3.0</span>（<span id="last-updated-date"></span>）
+  </footer>
+
+</div>
+
+<!-- モーダル (解説用) -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">タイトル</div>
+      <button class="close-btn" id="modalClose">&times;</button>
+    </div>
+    <div class="formula-box" id="modalFormula">計算式</div>
+    <div class="modal-desc" id="modalDesc">
+      解説テキスト
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const STORAGE_KEY = "rt_sim_v3";
+    const VERSION = "v3.0";
+
+    // -------------------------------------------------------
+    // フッター初期化 (自動日付更新)
+    // -------------------------------------------------------
+    function initFooter(){
+        var y=new Date().getFullYear();
+        var cpy=document.getElementById('cpy-year');
+        if(cpy) cpy.textContent=String(y);
+        
+        var d;
+        try{d=new Date(document.lastModified)}catch(_){d=new Date()}
+        if(!(d instanceof Date)||isNaN(d.getTime())) d=new Date();
+        
+        // JSTを考慮して日付文字列を生成 (簡易版)
+        var iso=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+        
+        var lu=document.getElementById('last-updated-date');
+        if(lu) lu.textContent=iso;
+        
+        var br=document.getElementById('build-rev');
+        if(br) br.textContent=VERSION;
+    }
+
+    // -------------------------------------------------------
+    // フォーマット関連関数
+    // -------------------------------------------------------
+    
+    // 数値のみ抽出 (例: "1,000" -> 1000)
+    function parseMoney(val){
+      if(!val) return 0;
+      const s = String(val).replace(/,/g, '').trim();
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    // カンマ区切り (例: 1000 -> "1,000")
+    function formatMoney(num){
+      if(!isFinite(num)) return "";
+      // 小数点以下は丸める
+      return Math.round(num).toLocaleString('ja-JP');
+    }
+
+    function formatCompact(num){
+      if(num >= 100000000) return (num/100000000).toFixed(1) + "億";
+      if(num >= 10000) return (num/10000).toFixed(0) + "万";
+      return num.toLocaleString('ja-JP');
+    }
+
+    // inputイベントでリアルタイムにカンマを入れる処理
+    function attachMoneyFormatter(){
+      const inputs = document.querySelectorAll('.format-money');
+      inputs.forEach(input => {
+        input.addEventListener('input', function(e){
+          // カーソル位置の保存（簡易的）
+          const originalVal = this.value;
+          const originalLen = originalVal.length;
+          const caretPos = this.selectionStart;
+
+          // カンマ除去して数値化
+          const raw = originalVal.replace(/[^0-9.]/g, '');
+          if(raw === "") {
+             this.value = "";
+             return;
+          }
+          
+          // 再フォーマット
+          const num = parseFloat(raw);
+          if(!isNaN(num)){
+            const formatted = num.toLocaleString('ja-JP');
+            if(originalVal !== formatted){
+                this.value = formatted;
+            }
+          }
+        });
+        
+        // blur時にも念のため整形
+        input.addEventListener('blur', function(){
+            const n = parseMoney(this.value);
+            if(n > 0) this.value = n.toLocaleString('ja-JP');
+        });
+      });
+    }
+
+    // -------------------------------------------------------
+    // 計算 & 表示ロジック
+    // -------------------------------------------------------
+
+    function getVal(id){
+      const el = document.getElementById(id);
+      if(!el) return 0;
+      if(el.classList.contains('format-money')){
+        return parseMoney(el.value);
+      }
+      return parseFloat(el.value) || 0;
+    }
+    
+    // 計算結果を保持する変数
+    let currentResult = null;
+
+    function calculate(){
+      // Input
+      const sales = getVal("sales");
+      const marginBase = getVal("marginBase") / 100;
+      const cogs = sales * (1 - marginBase); // 原価
+
+      // 1. CCC
+      const cccCurrent = getVal("cccCurrent");
+      const cccTarget = getVal("cccTarget");
+      const cccDiff = Math.max(0, cccCurrent - cccTarget);
+      const fundingRate = getVal("fundingRate") / 100;
+      const wcReduction = (cogs / 365) * cccDiff; 
+      const benefitCCC = wcReduction * fundingRate;
+
+      // 2. 逸失利益
+      const marginWorse = getVal("marginWorse") / 100;
+      const monthsDiff = Math.max(0, getVal("monthsWithout") - getVal("monthsWith"));
+      const marginDrop = Math.max(0, marginBase - marginWorse);
+      const benefitLoss = sales * marginDrop * (monthsDiff / 12);
+
+      // 3. 金利
+      const debt = getVal("debtBalance");
+      const rateDiff = getVal("rateDiff") / 100;
+      const benefitInterest = debt * rateDiff;
+
+      // 4. リスク
+      const lossAmt = getVal("lossAmount");
+      const probDiff = Math.max(0, getVal("probBefore") - getVal("probAfter")) / 100;
+      const benefitRisk = lossAmt * probDiff;
+
+      // Total
+      const totalBenefit = benefitCCC + benefitLoss + benefitInterest + benefitRisk;
+      const cost = getVal("annualCost");
+      const netBenefit = totalBenefit - cost;
+
+      const result = {
+        sales, cogs, cccDiff, fundingRate, wcReduction, benefitCCC,
+        monthsDiff, marginDrop, benefitLoss,
+        debt, rateDiff, benefitInterest,
+        lossAmt, probDiff, benefitRisk,
+        totalBenefit, cost, netBenefit
+      };
+      
+      currentResult = result;
+      render(result);
+      saveState();
+    }
+
+    function render(r){
+      const container = document.getElementById("results");
+      const maxVal = Math.max(r.benefitCCC, r.benefitLoss, r.benefitInterest, r.benefitRisk, 1);
+      
+      const getH = (v) => Math.max(4, (v/maxVal)*90) + "%";
+
+      container.innerHTML = `
+        <div class="result-main">
+          <div class="result-sub">年間期待メリット総額</div>
+          <div class="result-total">${formatMoney(r.totalBenefit)} 円</div>
+          <div class="result-sub" style="color:${r.netBenefit>=0?'var(--accent)':'var(--danger)'}">
+            (コスト差引後: ${r.netBenefit>=0?'+':''}${formatCompact(r.netBenefit)})
+          </div>
+        </div>
+
+        <div class="chart">
+          <div class="chart-col">
+            <div class="chart-bar-wrapper"><div class="chart-bar" style="height:${getH(r.benefitCCC)}"><span class="bar-val">${formatCompact(r.benefitCCC)}</span></div></div>
+            <div class="chart-label">運転資金<br>効果</div>
+          </div>
+          <div class="chart-col">
+            <div class="chart-bar-wrapper"><div class="chart-bar" style="height:${getH(r.benefitLoss)}"><span class="bar-val">${formatCompact(r.benefitLoss)}</span></div></div>
+            <div class="chart-label">逸失利益<br>防止</div>
+          </div>
+          <div class="chart-col">
+            <div class="chart-bar-wrapper"><div class="chart-bar" style="height:${getH(r.benefitInterest)}"><span class="bar-val">${formatCompact(r.benefitInterest)}</span></div></div>
+            <div class="chart-label">金利是正<br>効果</div>
+          </div>
+          <div class="chart-col">
+            <div class="chart-bar-wrapper"><div class="chart-bar" style="height:${getH(r.benefitRisk)}"><span class="bar-val">${formatCompact(r.benefitRisk)}</span></div></div>
+            <div class="chart-label">リスク<br>回避</div>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-card" onclick="showModal('ccc')">
+            <h3>CCC・キャッシュフロー</h3>
+            <div class="val-main">${formatMoney(r.benefitCCC)} <small>円</small></div>
+            <div class="val-sub">${r.cccDiff.toFixed(0)}日短縮 × ${formatCompact(r.wcReduction)}円削減</div>
+          </div>
+          <div class="result-card" onclick="showModal('loss')">
+            <h3>粗利悪化の早期検知</h3>
+            <div class="val-main">${formatMoney(r.benefitLoss)} <small>円</small></div>
+            <div class="val-sub">${r.monthsDiff.toFixed(1)}ヶ月早期化による防止</div>
+          </div>
+          <div class="result-card" onclick="showModal('interest')">
+            <h3>銀行金利コスト適正化</h3>
+            <div class="val-main">${formatMoney(r.benefitInterest)} <small>円</small></div>
+            <div class="val-sub">金利 ${(r.rateDiff*100).toFixed(2)}% 改善想定</div>
+          </div>
+          <div class="result-card" onclick="showModal('risk')">
+            <h3>リスク期待値の低減</h3>
+            <div class="val-main">${formatMoney(r.benefitRisk)} <small>円</small></div>
+            <div class="val-sub">発生率 ${(r.probDiff*100).toFixed(1)}%pt 低下</div>
+          </div>
+        </div>
+
+        <div class="result-footer">
+          <div class="result-footer-row">
+             <span>導入・維持コスト</span>
+             <strong>${formatMoney(r.cost)} 円</strong>
+          </div>
+          <div class="result-footer-row">
+             <span>投資対効果 (ROI)</span>
+             <strong>${r.cost > 0 ? ((r.netBenefit/r.cost)*100).toFixed(1) + "%" : "-"}</strong>
+          </div>
+        </div>
+      `;
+      
+      // スマホならスクロール
+      if(window.innerWidth < 900){
+        document.getElementById("resultCard").scrollIntoView({behavior:"smooth", block:"start"});
+      }
+    }
+
+    // -------------------------------------------------------
+    // モーダル (解説)
+    // -------------------------------------------------------
+    window.showModal = function(type){
+      if(!currentResult) return;
+      
+      const overlay = document.getElementById("modalOverlay");
+      const titleEl = document.getElementById("modalTitle");
+      const formEl = document.getElementById("modalFormula");
+      const descEl = document.getElementById("modalDesc");
+      
+      const r = currentResult;
+      
+      if(type === 'ccc'){
+        titleEl.innerText = "① CCC短縮による金利削減効果";
+        formEl.innerText = `(売上原価 ÷ 365) × 短縮日数 × 資金コスト率\n\n= (${formatCompact(r.cogs)} ÷ 365) × ${r.cccDiff}日 × ${(r.fundingRate*100).toFixed(1)}%`;
+        descEl.innerHTML = `
+          <p><strong>考え方：</strong><br>在庫や売掛金として「寝ている現金（運転資金）」を減らすことで、そのお金にかかっている金利コスト（または投資できたはずの機会費用）を削減できます。</p>
+          <p>CCCが ${r.cccDiff}日 短縮されると、手元のキャッシュが <strong>${formatCompact(r.wcReduction)}円</strong> 増える計算になります。これに対する金利分がメリットとなります。</p>
+        `;
+      } else if(type === 'loss'){
+        titleEl.innerText = "② 粗利悪化の早期検知・防止";
+        formEl.innerText = `年間売上 × (平常粗利率 - 悪化粗利率) × (短縮月数 ÷ 12)\n\n= ${formatCompact(r.sales)} × ${(r.marginDrop*100).toFixed(1)}% × (${r.monthsDiff}ヶ月 ÷ 12)`;
+        descEl.innerHTML = `
+          <p><strong>考え方：</strong><br>原価高騰や不正な値引きにより利益率が落ちた際、年一回の決算で気づくのと、毎月の月次決算で気づくのとでは、対策までのスピードが違います。</p>
+          <p>異常状態を <strong>${r.monthsDiff}ヶ月</strong> 早く見つけて是正することで、その期間に失われるはずだった利益を守ったと考えます。</p>
+        `;
+      } else if(type === 'interest'){
+        titleEl.innerText = "③ 銀行金利コストの適正化";
+        formEl.innerText = `借入残高 × 金利改善幅\n\n= ${formatCompact(r.debt)} × ${(r.rateDiff*100).toFixed(2)}%`;
+        descEl.innerHTML = `
+          <p><strong>考え方：</strong><br>正確な試算表（月次決算書）を即座に銀行へ提出できる体制は、企業の格付け評価（信用力）を向上させます。</p>
+          <p>これにより、将来的な借入金利の引き下げや、有利な条件での調達が可能になる効果を試算しています。</p>
+        `;
+      } else if(type === 'risk'){
+        titleEl.innerText = "④ 重大リスクの回避（期待値）";
+        formEl.innerText = `損失額 × (発生確率Before - 発生確率After)\n\n= ${formatCompact(r.lossAmt)} × ${(r.probDiff*100).toFixed(1)}%`;
+        descEl.innerHTML = `
+          <p><strong>考え方：</strong><br>横領、使い込み、税務調査での追徴課税など、「滅多に起きないが、起きたら致命的」な事故のリスクを確率論（期待値）で計算します。</p>
+          <p>自計化により社内の数字への意識が高まることで、これらの事故が起きる確率を <strong>${(r.probDiff*100).toFixed(1)}%</strong> 下げられたとしての価値換算です。</p>
+        `;
+      }
+      
+      overlay.classList.add("active");
+    };
+
+    // モーダル閉じる
+    document.getElementById("modalClose").addEventListener("click", ()=>{
+      document.getElementById("modalOverlay").classList.remove("active");
+    });
+    document.getElementById("modalOverlay").addEventListener("click", (e)=>{
+      if(e.target === document.getElementById("modalOverlay")){
+        document.getElementById("modalOverlay").classList.remove("active");
+      }
+    });
+
+    // -------------------------------------------------------
+    // 保存・読込・初期化
+    // -------------------------------------------------------
+    function saveState(){
+      const inputs = document.querySelectorAll("input");
+      const data = {};
+      inputs.forEach(el => data[el.id] = el.value);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    
+    function loadState(){
+      try{
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if(data){
+          Object.keys(data).forEach(k => {
+            const el = document.getElementById(k);
+            if(el) el.value = data[k];
+          });
+        }
+      }catch(e){}
+    }
+
+    // Init
+    initFooter(); // フッター初期化
+    attachMoneyFormatter();
+    loadState();
+    
+    document.getElementById("simForm").addEventListener("submit", (e)=>{
+      e.preventDefault();
+      calculate();
+    });
+    
+    document.getElementById("resetBtn").addEventListener("click", ()=>{
+       if(confirm("数値をリセットしますか？")){
+           document.getElementById("simForm").reset();
+           localStorage.removeItem(STORAGE_KEY);
+           document.getElementById("results").innerHTML = '<div class="result-main" style="padding:40px 0;color:var(--muted);">計算結果がここに表示されます</div>';
+           currentResult = null;
+       }
+    });
+
+  })();
+</script>
+</body>
+</html>
